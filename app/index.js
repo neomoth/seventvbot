@@ -97,8 +97,8 @@ client.on(Events.MessageCreate, async (e)=>{
 	let persistRoles = getValue(correctMutableName('persistRoles'));
 	if(persistRoles.length>0){
 		for(const role of persistRoles){
-			if(!member.roles.cache.has(role)) continue;
-			member.roles.add(role);
+			if(!e.member.roles.cache.has(role)) continue;
+			e.member.roles.add(role);
 		}
 	}
 
