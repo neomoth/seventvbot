@@ -9,7 +9,7 @@ module.exports = {
 		name: 'config',
 		description: 'update bot configuration',
 		aliases: ['cfg'],
-		mod: true,
+		admin: true,
 		usage: ']config <(get <key> | list | set <key> <value> | reset <key> | (flush | reset-all | resetall))>'
 	},
 	async execute(i,args){

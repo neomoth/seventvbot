@@ -133,12 +133,21 @@ client.on(Events.MessageCreate, async (e)=>{
 			}
 		}
 		let isMod = false;
-		for(const perm of getValue(correctMutableName('modPermissions'))){
-			if(!e.member.permissions.has(perm)) continue;
+		let isAdmin = false;
+		for(const role of getValue(correctMutableName('modRoles'))){
+			if(!e.member.roles.cache.has(role)) continue;
 			isMod = true;
 		}
-		if(e.author.id==ownerId) isMod = true;
+		for(const role of getValue(correctMutableName('adminRoles'))){
+			if(!e.member.roles.cache.has(role)) continue;
+			isAdmin = true;
+		}
+		if(e.author.id==ownerId) {
+			isMod = true;
+			isAdmin = true;
+		}
 		if(cmd.data.mod&&!isMod) return;
+		if(cmd.data.admin&&!isAdmin) return;
 		if(getValue(correctMutableName('lockCommands'))){
 			if(cmd.data.restrict && getValue(correctMutableName('commandChannels')).length>0)
 				if(!getValue(correctMutableName('commandChannels')).includes(e.channelId)&&e.author.id!=ownerId&&!e.member.permissions.has(PermissionsBitField.Flags.ManageMessages,false))return;
@@ -594,12 +603,30 @@ client.reloadCommands();
 const defaultConfPath = path.join(__dirname, 'config/default-config.json');
 const confPath = path.join(__dirname, 'config/config.json');
 const dbPath = path.join(__dirname, 'db.sqlite');
-
-function mergeConfigs(defaultConf, conf){
-	return { ...defaultConf, ...conf };
+function areKeysDifferent(defaultConf, userConf) {
+	return Object.keys(defaultConf).filter(key => userConf[key] !== defaultConf[key]);
 }
-function findNewKeys(defaultConf, userConf) {
-    return Object.keys(defaultConf).filter(key => !(key in userConf));
+// new default keys should be added to the config file, removed default keys should be removed from the config file, no changes in config file affect default config file.
+const removedKeys = [];
+const addedKeys = [];
+function syncConfigKeys(defaultConf, userConf) {
+	const syncedConf = {};
+	for(const key in defaultConf){
+		if(typeof defaultConf[key] === 'object' && !Array.isArray(defaultConf[key])){
+			syncedConf[key] = syncConfigKeys(defaultConf[key], userConf[key]) || {};
+			addedKeys.push(key);
+		}
+		else{
+			syncedConf[key] = userConf[key] !== undefined ? userConf[key] : defaultConf[key];
+			addedKeys.push(key);
+		}
+	}
+	for(const key in userConf){
+		if(!(key in defaultConf)){
+			removedKeys.push(key);
+		}
+	}
+	return syncedConf;
 }
 if(!fs.existsSync(confPath)){
 	console.info('[INFO]: Config file not found. Creating default config file.');
@@ -614,15 +641,9 @@ else{
 	console.info('[INFO]: Config found. Checking for new defaults...');
 	const defaultConf = JSON.parse(fs.readFileSync(defaultConfPath));
 	const conf = JSON.parse(fs.readFileSync(confPath));
-	const newKeys = findNewKeys(defaultConf, conf);
-	if(newKeys.length>0){
-		console.info('[INFO]: New keys found. Updating config file.');
-		fs.writeFileSync(confPath, JSON.stringify(mergeConfigs(defaultConf, conf), null, 4));
-		console.info('[INFO]: Updated config file.');
-	}
-	else{
-		console.info('[INFO]: Config file up to date.');
-	}
+	if(areKeysDifferent(defaultConf, conf).length>0) 
+		fs.writeFileSync(confPath, JSON.stringify(syncConfigKeys(defaultConf, conf), null, 4));
+	// console.info(`[INFO]: Default config was modified.${addedKeys.length>0 ? `\nThe following keys were added to the config file: ${addedKeys.join(', ')}` : ''}${removedKeys.length>0 ? `\nThe following keys were removed from the config file: ${removedKeys.join(', ')}` : ''}`);
 }
 
 process.on('SIGINT', async () => {

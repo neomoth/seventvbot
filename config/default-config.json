@@ -35,8 +35,8 @@
         "confirmColor": "#00ff80",
         "errorColor": "#c42348",
         "privilegedUsers": [],
-        "modPermissions": [],
-        "enforceAllModPermissions": false
+        "modRoles": [],
+		"adminRoles": []
     },
     "types": {
         "logging": "Boolean",
@@ -68,8 +68,8 @@
         "confirmColor": "Hex",
         "errorColor": "Hex",
         "privilegedUsers": "Array[ID:USER]",
-        "modPermissions": "Array[Permission]",
-        "enforceAllModPermissions": "Boolean"
+        "modRoles": "Array[ID:ROLE]",
+		"adminRoles": "Array[ID:ROLE]"
     },
     "defaults": {
         "logging": false,
@@ -101,8 +101,8 @@
         "confirmColor": "#00ff80",
         "errorColor": "#c42348",
         "privilegedUsers": [],
-        "modPermissions": [],
-        "enforceAllModPermissions": false
+        "modRoles": [],
+		"adminRoles": []
     },
     "descriptions": {
         "logging": "Whether or not to use logging features. Requires \u001b[35mlogChannel\u001b[0m to be set.",
@@ -134,7 +134,7 @@
         "confirmColor": "The color the bot will use for embeds that result in what is deemed a success.",
         "errorColor": "The color the bot will use for embeds that result in what is deemed a failure.",
         "privilegedUsers": "Array of user IDs that are exempt from most restrictions. This does \u001b[1mNOT\u001b[0m include access to \u001b[34meval\u001b[0m.",
-        "modPermissions": "Array of permission flags that are required to use commands flagged as \u001b[36mmod\u001b[0m.",
-        "enforceAllModPermissions": "Whether or not you need to have ALL permissions listed in \u001b[35mmodPermissions\u001b[0m to use a mod command, as opposed to just one of them."
+		"modRoles": "Array of role IDs that are required to use commands flagged as \u001b[36mmod\u001b[0m.",
+		"adminRoles": "Array of role IDs that are required to use commands flagged as \u001b[36madmin\u001b[0m."
     }
 }

@@ -16,14 +16,22 @@ module.exports = {
 		let restricts=[]; //array
 		let aliases=[]; //array of arrays
 		let mods = []; // array
+		let admins = []; // array
 		let guildId = []; //array
 		let isMod = false;
-		for(const perm of getValue(correctMutableName('modPermissions'))){
-			if(!i.member.permissions.has(perm)) continue;
+		let isAdmin = false;
+		for(const role of getValue(correctMutableName('modRoles'))){
+			if(!i.member.roles.cache.has(role)) continue;
 			isMod = true;
 		}
-		if(i.author.id==ownerId) isMod = true;
-		console.log(args);
+		for(const role of getValue(correctMutableName('adminRoles'))){
+			if(!i.member.roles.cache.has(role)) continue;
+			isAdmin = true;
+		}
+		if(i.author.id==ownerId) {
+			isMod = true;
+			isAdmin = true;
+		}
 		if(!args[0]){
 			const pagination = new Pagination(i);
 			for(let [index,cmd] of i.client.commands){
@@ -31,11 +39,12 @@ module.exports = {
 				descriptions.push(cmd.data.description);
 				usages.push(cmd.data.usage);
 				if(cmd.data.mod)mods.push(cmd.data.mod);else mods.push(false);
+				if(cmd.data.admin)admins.push(cmd.data.admin);else admins.push(false);
 				if(cmd.data.restrict)restricts.push(cmd.data.restrict);else restricts.push(false);
 				if(cmd.data.aliases.length>0)aliases.push(cmd.data.aliases);else aliases.push(['[No aliases]']);
 				if(cmd.data.associatedGuild)guildId.push(cmd.data.associatedGuild);else guildId.push(null);
 			}
-			pagination.setColor(isMod ? getValue(correctMutableName('specialColor')) : getValue(correctMutableName('primaryColor')));
+			pagination.setColor(isMod || isAdmin ? getValue(correctMutableName('specialColor')) : getValue(correctMutableName('primaryColor')));
 			pagination.setTitle('Command List');
 			pagination.setDescription(`Type \`]help command\` for more info, e.g. \`]help ping\``);
 			let fields=[];

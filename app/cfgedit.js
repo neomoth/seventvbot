@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const config = path.join(__dirname, 'config/config.json');
+// const defaultConfig = path(__dirname, 'config/defaultConfig.json');
 
 function getMutable(key){
 	let cfg = JSON.parse(fs.readFileSync(config));
