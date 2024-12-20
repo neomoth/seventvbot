@@ -2,7 +2,8 @@ function removequotes(str){
 	return str.replace(/^['"]+|['"]+$/g, '');
 }
 
-const {PermissionsBitField, Permissions, Role, User, GuildMember} = require('discord.js');
+const {PermissionsBitField, EmbedBuilder} = require('discord.js');
+const {Pagination} = require('pagination.djs');
 const {cfgEdit, getMutables, getKeyType, mutableExists, correctMutableName, setDefault, resetAll, getDescription, getDecoratedValue} = require('../cfgedit');
 module.exports = {
 	data:{
@@ -15,16 +16,29 @@ module.exports = {
 	async execute(i,args){
 		if(!args[0]) return await i.reply(`You need to specify whether to get, set, or reset a key. usage: \`${this.data.usage}\``);
 		if(args[0].toLowerCase()==='get'){
-			if(!args[1]) return await i.reply("You need to specify a key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
-			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
+			if(!args[1]) return await i.reply("You need to specify a key. Execute `]config list` to see valid keys.");
+			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Execute `]config list` to see valid keys.");
 			return await i.reply(`Current value of \`${correctMutableName(args[1])}\`: \`${getDecoratedValue(args[1])}\`. Value type: \`${getKeyType(correctMutableName(args[1]))}\`\nDescription: \`\`\`ansi\n${getDescription(correctMutableName(args[1]))}\n\`\`\``);
 		}
 		else if(args[0].toLowerCase()==='list'){
-			return await i.reply(`Current configuration:\n${Object.keys(getMutables()).map(k=>`\`${k}\`: \`${getDecoratedValue(k)}\``).join('\n')}`);
+			// return await i.reply(`Current configuration:\n${Object.keys(getMutables()).map(k=>`\`${k}\`: \`${getDecoratedValue(k)}\``).join('\n')}`);
+			const fields = [];
+			for(const key of Object.keys(getMutables())){
+				fields.push({
+					name: key,
+					value: getDecoratedValue(key)
+				})
+			}
+			const embed = new Pagination(i)
+				.setColor(getDecoratedValue(correctMutableName('primaryColor')))
+				.setTitle('Current configuration')
+				.setFields(fields);
+			await embed.paginateFields();
+			return await embed.render();
 		}
 		else if(args[0].toLowerCase()==='set'){
-			if(!args[1]) return await i.reply("You need to specify a key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
-			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
+			if(!args[1]) return await i.reply("You need to specify a key. Execute `]config list` to see valid keys.");
+			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Execute `]config list` to see valid keys.");
 			
 			let key = correctMutableName(args[1]);
 
@@ -244,8 +258,8 @@ module.exports = {
 			return await i.reply(`Set config value for \`${key}\` to \`${value}\`.`);
 		}
 		else if(args[0].toLowerCase()==='reset'){
-			if(!args[1]) return await i.reply("You need to specify a key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
-			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Valid keys are:\n"+Object.keys(getMutables()).map(k=>`\`${k}\``).join(', '));
+			if(!args[1]) return await i.reply("You need to specify a key. Execute `]config list` to see valid keys.");
+			if(!mutableExists(args[1])) return await i.reply("Invalid config key. Execute `]config list` to see valid keys.");
 			setDefault(correctMutableName(args[1]));
 			return await i.reply(`Reset config value for \`${correctMutableName(args[1])}\` to \`${getDecoratedValue(correctMutableName(args[1]))}\`.`);
 		}

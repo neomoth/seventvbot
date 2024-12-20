@@ -242,7 +242,17 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 	await logChannel.send({embeds:[logEmbed]});
 });
 client.on(Events.GuildMemberAdd, async (member) => {
-	if (!await safetyCheck(member)) return;
+
+	// TODO: move this to a module when that system actually exists
+	let joinRoles = getValue(correctMutableName('joinRoles'));
+	if(joinRoles.length>0){
+		for(const role of joinRoles){
+			if(!member.roles.cache.has(role)) continue;
+			member.roles.add(role);
+		}
+	}
+
+	if(!await safetyCheck(member)) return;
 	if(!getValue(correctMutableName('logging.GuildMemberAdd'))) return;
 
 	SQL.addLog(member.user.id, 'N/A', 'join', `Joined on ${member.joinedAt}`, Date.now()/1000);

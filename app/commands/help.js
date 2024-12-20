@@ -54,6 +54,8 @@ module.exports = {
 			let fields=[];
 			for(let n = 0;n<names.length;n++){
 				if(mods[n]&&!isMod) continue;
+				if(admins[n]&&!isAdmin) continue;
+				if(owners[n]&&!isOwner) continue;
 				if(guildId[n]&&guildId[n]!=i.guildId)continue;
 				fields.push({
 					name:names[n],

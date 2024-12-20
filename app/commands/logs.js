@@ -92,7 +92,6 @@ module.exports = {
 		}
 		pagination.setFields(fields);
 		pagination.paginateFields();
-		await pagination.render();
-		return;
+		return await pagination.render();
 	}
 }
