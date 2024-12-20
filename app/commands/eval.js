@@ -33,10 +33,10 @@ module.exports = {
 				let res = eval(eRes[0]);
 				if(hide)i.delete();
 				else try{
-					await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctedMutableName('primaryColor'))).setTitle('eval result').setDescription(res.toString())]});
+					await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctMutableName('primaryColor'))).setTitle('eval result').setDescription(res.toString())]});
 				}catch(e){
 					// console.error(e);
-					await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctedMutableName('errorColor'))).setTitle('eval result').setDescription((typeof res).toString())]});
+					await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctMutableName('errorColor'))).setTitle('eval result').setDescription((typeof res).toString())]});
 				}
 				return;
 			}
@@ -55,10 +55,10 @@ module.exports = {
 			await i.delete();
 		}else{
 			try{
-				await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctedMutableName('primaryColor'))).setTitle('eval result').setDescription(evaluated.toString())]});
+				await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctMutableName('primaryColor'))).setTitle('eval result').setDescription(evaluated.toString())]});
 			}catch(e){
 				// console.error(e);
-				await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctedMutableName('errorColor'))).setTitle('eval result').setDescription((typeof evaluated).toString())]});
+				await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctMutableName('errorColor'))).setTitle('eval result').setDescription((typeof evaluated).toString())]});
 			}
 		}
 	}
