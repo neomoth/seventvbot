@@ -17,9 +17,11 @@ module.exports = {
 		let aliases=[]; //array of arrays
 		let mods = []; // array
 		let admins = []; // array
+		let owners = []; // array
 		let guildId = []; //array
 		let isMod = false;
 		let isAdmin = false;
+		let isOwner = false;
 		for(const role of getValue(correctMutableName('modRoles'))){
 			if(!i.member.roles.cache.has(role)) continue;
 			isMod = true;
@@ -31,6 +33,7 @@ module.exports = {
 		if(i.author.id==ownerId||i.author.id==i.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
+			isOwner = true;
 		}
 		if(!args[0]){
 			const pagination = new Pagination(i);
@@ -40,11 +43,12 @@ module.exports = {
 				usages.push(cmd.data.usage);
 				if(cmd.data.mod)mods.push(cmd.data.mod);else mods.push(false);
 				if(cmd.data.admin)admins.push(cmd.data.admin);else admins.push(false);
+				if(cmd.data.owner)owners.push(cmd.data.owner);else owners.push(false);
 				if(cmd.data.restrict)restricts.push(cmd.data.restrict);else restricts.push(false);
 				if(cmd.data.aliases.length>0)aliases.push(cmd.data.aliases);else aliases.push(['[No aliases]']);
 				if(cmd.data.associatedGuild)guildId.push(cmd.data.associatedGuild);else guildId.push(null);
 			}
-			pagination.setColor(isMod || isAdmin ? getValue(correctMutableName('specialColor')) : getValue(correctMutableName('primaryColor')));
+			pagination.setColor(isMod || isAdmin || isOwner ? getValue(correctMutableName('specialColor')) : getValue(correctMutableName('primaryColor')));
 			pagination.setTitle('Command List');
 			pagination.setDescription(`Type \`]help command\` for more info, e.g. \`]help ping\``);
 			let fields=[];

@@ -7,7 +7,7 @@ module.exports = {
 		description:'evaluate js | reserved for bot maintainer',
 		usage:`]eval <code> [-s <alias> (save)] [-h (hide)] | ]eval del <alias>`,
 		aliases:['e'],
-		mod:true
+		owner:true
 	},async execute(i,args){
 		if(i.author.id!=ownerId)return;
 		let hide = false;

@@ -134,6 +134,7 @@ client.on(Events.MessageCreate, async (e)=>{
 		}
 		let isMod = false;
 		let isAdmin = false;
+		let isOwner = false;
 		for(const role of getValue(correctMutableName('modRoles'))){
 			if(!e.member.roles.cache.has(role)) continue;
 			isMod = true;
@@ -145,9 +146,11 @@ client.on(Events.MessageCreate, async (e)=>{
 		if(e.author.id==ownerId||e.author.id==e.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
+			isOwner = true;
 		}
 		if(cmd.data.mod&&!isMod) return;
 		if(cmd.data.admin&&!isAdmin) return;
+		if(cmd.data.owner&&!isOwner) return;
 		if(getValue(correctMutableName('lockCommands'))){
 			if(cmd.data.restrict && getValue(correctMutableName('commandChannels')).length>0)
 				if(!getValue(correctMutableName('commandChannels')).includes(e.channelId)&&e.author.id!=ownerId&&!e.member.permissions.has(PermissionsBitField.Flags.ManageMessages,false))return;
