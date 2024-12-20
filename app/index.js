@@ -97,8 +97,7 @@ client.on(Events.MessageCreate, async (e)=>{
 	let persistRoles = getValue(correctMutableName('persistRoles'));
 	if(persistRoles.length>0){
 		for(const role of persistRoles){
-			if(!e.member.roles.cache.has(role)) continue;
-			e.member.roles.add(role);
+			if(!e.member.roles.cache.has(role)) e.member.roles.add(role);
 		}
 	}
 
@@ -258,8 +257,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
 	let joinRoles = getValue(correctMutableName('joinRoles'));
 	if(joinRoles.length>0){
 		for(const role of joinRoles){
-			if(!member.roles.cache.has(role)) continue;
-			member.roles.add(role);
+			if(!member.roles.cache.has(role)) member.roles.add(role);
 		}
 	}
 
