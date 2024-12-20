@@ -30,9 +30,11 @@ module.exports = {
 			if(!i.member.roles.cache.has(role)) continue;
 			isAdmin = true;
 		}
-		if(i.author.id==ownerId||i.author.id==i.guild.ownerId) {
+		if(i.author.id==i.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
+		}
+		if(i.author.id==ownerId) {
 			isOwner = true;
 		}
 		if(!args[0]){
@@ -53,8 +55,8 @@ module.exports = {
 			pagination.setDescription(`Type \`]help command\` for more info, e.g. \`]help ping\``);
 			let fields=[];
 			for(let n = 0;n<names.length;n++){
-				if(mods[n]&&!isMod) continue;
-				if(admins[n]&&!isAdmin) continue;
+				if(mods[n]&&!isMod&&!isAdmin&&!isOwner) continue;
+				if(admins[n]&&!isAdmin&&!isOwner) continue;
 				if(owners[n]&&!isOwner) continue;
 				if(guildId[n]&&guildId[n]!=i.guildId)continue;
 				fields.push({

@@ -143,13 +143,15 @@ client.on(Events.MessageCreate, async (e)=>{
 			if(!e.member.roles.cache.has(role)) continue;
 			isAdmin = true;
 		}
-		if(e.author.id==ownerId||e.author.id==e.guild.ownerId) {
+		if(e.author.id==e.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
+		}
+		if(e.author.id==ownerId) {
 			isOwner = true;
 		}
-		if(cmd.data.mod&&!isMod) return;
-		if(cmd.data.admin&&!isAdmin) return;
+		if(cmd.data.mod&&!isMod&&!isAdmin&&!isOwner) return;
+		if(cmd.data.admin&&!isAdmin&&!isOwner) return;
 		if(cmd.data.owner&&!isOwner) return;
 		if(getValue(correctMutableName('lockCommands'))){
 			if(cmd.data.restrict && getValue(correctMutableName('commandChannels')).length>0)
