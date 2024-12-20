@@ -142,7 +142,7 @@ client.on(Events.MessageCreate, async (e)=>{
 			if(!e.member.roles.cache.has(role)) continue;
 			isAdmin = true;
 		}
-		if(e.author.id==ownerId) {
+		if(e.author.id==ownerId||e.author.id==e.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
 		}

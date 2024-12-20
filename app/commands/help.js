@@ -28,7 +28,7 @@ module.exports = {
 			if(!i.member.roles.cache.has(role)) continue;
 			isAdmin = true;
 		}
-		if(i.author.id==ownerId) {
+		if(i.author.id==ownerId||i.author.id==i.guild.ownerId) {
 			isMod = true;
 			isAdmin = true;
 		}
