@@ -1,0 +1,55 @@
+const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
+const { get } = require('http');
+const path = require('path');
+
+var db;
+
+module.exports={
+	database:db,
+	promise:function(dbfunc, ...args){
+		const that = this; // i dont know why this is here all i know is i was told to add it and i am scared to remove it
+		return new Promise(function(resolve, reject) {
+			dbfunc(...args,function(err, res){
+				if(err) reject(err);
+				else resolve(res);
+			});
+		});
+	},
+	
+	//called on ready
+	connect:async()=>{
+		console.info('[INFO]: Connecting to database...');
+		db = new sqlite3.Database(path.join(__dirname, 'db.sqlite'), err=>{
+			if(err) {
+				console.error('[FATAL]: There was a problem connecting to the database: '+err+'\nStack Trace:\n'+err.stack);
+				throw err; // required, throw an error here.
+			}
+		});
+		await db.run('CREATE TABLE IF NOT EXISTS logs(id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, guild TEXT, type TEXT, reason TEXT, timestamp TEXT, mod TEXT)');
+		console.info('[INFO]: Connected to database.');
+	},
+
+	// logs
+	addLog:async(user, guild, type, reason, timestamp, mod, func=null)=>{
+		await db.run('INSERT INTO logs(user, guild, type, reason, timestamp, mod) VALUES(?, ?, ?, ?, ?, ?, ?)', [user, guild, type, reason, timestamp, mod], func);
+	},
+	getLogById:async(id, func=null)=>{
+		return await db.get('SELECT * FROM logs WHERE id = ?', [id], func);
+	},
+	getAllLogs:async(func=null)=>{
+		return await db.all('SELECT * FROM logs', [], func);
+	},
+	getAllLogsByUser:async(user, guild, func=null)=>{
+		return await db.all('SELECT * FROM logs WHERE user = ? AND guild = ?', [user, guild], func);
+	},
+	getAllLogsFromGuild:async(guild, func=null)=>{
+		return await db.all('SELECT * FROM logs WHERE guild = ?', [guild], func);
+	},
+	getLogCountByUser:async(user, guild, func=null)=>{
+		return await db.get('SELECT COUNT(*) FROM logs WHERE user = ? AND guild = ?', [user, guild], func);
+	},
+	wipeAllLogs:async(func=null)=>{
+		return await db.run('DELETE FROM logs', [], func);
+	},
+}

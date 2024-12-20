@@ -1,4 +1,4 @@
-const{ownerId}=require('../config.json');
+const{ownerId}=require('../config/config.json');
 const {getValue, correctMutableName} = require('../cfgedit');
 const{ButtonBuilder,EmbedBuilder,ButtonStyle, PermissionsBitField}=require('discord.js');
 const{Pagination}=require('pagination.djs');

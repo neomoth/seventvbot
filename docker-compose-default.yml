@@ -1,0 +1,31 @@
+services:
+  app:
+    build: ./app
+    depends_on:
+      - db
+    volumes:
+      - ./config:/usr/src/app/config
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASS=password # REPLACE THIS LINE WITH A SECURE PASSWORD
+      - DB_NAME=db
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  db:
+    image: mariadb:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=password # REPLACE THIS LINE WITH THE SAME SECURE PASSWORD YOU USED ABOVE
+      - MYSQL_DATABASE=db
+    volumes:
+      - ./data:/var/lib/mysql
+    ports:
+      - 3306:3306 # I recommend changing this port to something else to better obscure it.
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

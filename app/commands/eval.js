@@ -1,5 +1,5 @@
 const {getValue, correctMutableName} = require('../cfgedit');
-const {ownerId} = require('../config.json');
+const {ownerId} = require('../config/config.json');
 const {EmbedBuilder} = require("discord.js");
 module.exports = {
 	data:{

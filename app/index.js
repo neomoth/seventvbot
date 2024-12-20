@@ -1,16 +1,20 @@
-const{Client, Events, Collection, GatewayIntentBits, PermissionsBitField, Partials, EmbedBuilder, Message, VoiceState, VoiceChannel, GuildMember, GuildBan, MessageType}=require('discord.js');
+const{Client, Events, Collection, GatewayIntentBits, AuditLogEvent, PermissionsBitField, Partials, EmbedBuilder, Message, VoiceState, VoiceChannel, GuildMember, GuildBan, MessageType}=require('discord.js');
 const readline = require('readline');
-const{token, globalPrefix, ownerId}=require('./config.json');
+const{token, globalPrefix, ownerId}=require('./config/config.json');
 const{getValue, correctMutableName} = require('./cfgedit');
 const fs = require('node:fs');
 const path = require('node:path');
-//const SQL = require('./sqlite');
+const SQL = require('./sql');
+// const deploySlashCommands = require('./deploySlashCommands');
 
 const client = new Client({intents:[GatewayIntentBits.GuildMessageReactions, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildModeration, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds,GatewayIntentBits.MessageContent,GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMessageReactions,GatewayIntentBits.GuildMembers],
 	partials:[Partials.Message, Partials.Channel, Partials.Reaction]});
 client.commands = new Collection();
 //client.slashCommands = new Collection();
 client.storedData=new Collection();
+
+// client.deploySlashCommands=deploySlashCommands; // for use with eval to live reload interactions
+
 // Allow commands to be reloaded without having to take bot offline.
 client.reloadCommands=function(){
 	client.commands.clear();
@@ -43,7 +47,7 @@ client.reloadCommands=function(){
 // 	}
 // }
 client.globalPrefix = globalPrefix;
-//client.sql=SQL;
+client.sql=SQL;
 function parseISOString(s) {
 	let b = s.split(/\D+/);
 	return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
@@ -169,6 +173,23 @@ async function safetyCheck(obj){
 client.on(Events.MessageDelete, async (message) => {
 	if (!await safetyCheck(message)) return;
 	if(!getValue(correctMutableName('logging.MessageDelete'))) return;
+
+	let moderator = null;
+	try{
+		const auditLogs = await message.guild.fetchAuditLogs({
+			type:AuditLogEvent.MessageDelete,
+			limit: 1
+		});
+		const entry = auditLogs.entries.first();
+		if(entry){
+			if(entry.executor.id!=message.author.id) moderator = entry.executor.id;
+		}
+	}catch(e){
+		console.error(e, "(likely lacks perms to fetch audit logs)");
+	}
+
+	SQL.addLog(message.author.id, moderator ? moderator : 'N/A', 'deletemessage', `Message deleted in #${message.channel.name}`, Date.now()/1000);
+
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('errorColor')));
@@ -185,6 +206,9 @@ client.on(Events.MessageDelete, async (message) => {
 client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 	if (!await safetyCheck(newMessage)) return;
 	if(!getValue(correctMutableName('logging.MessageUpdate'))) return;
+
+	SQL.addLog(newMessage.author.id, 'N/A', 'editmessage', `Edited message: \`${oldMessage.content}\` -> \`${newMessage.content}\``, Date.now()/1000);
+
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('altColor')));
@@ -201,6 +225,9 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 client.on(Events.GuildMemberAdd, async (member) => {
 	if (!await safetyCheck(member)) return;
 	if(!getValue(correctMutableName('logging.GuildMemberAdd'))) return;
+
+	SQL.addLog(member.user.id, 'N/A', 'join', `Joined on ${member.joinedAt}`, Date.now()/1000);
+
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('confirmColor')));
@@ -217,22 +244,30 @@ client.on(Events.GuildMemberAdd, async (member) => {
 	logEmbed.setDescription(`<@${member.user.id}> - ${count}${suffix} member to join.\nJoined on ${member.joinedAt}\nMember created at ${member.user.createdAt}`);
 	logEmbed.setTimestamp(Date.now());
 	logEmbed.setFooter({text:`User ID: ${member.user.id}`});
-	let msg = await logChannel.send({embeds:[logEmbed]});
-
-	// if(member.joinedAt - member.user.createdAt <= 14 * 24 * 60 * 60 *1000){
-	// 	await member.guild.channels.fetch();
-	// 	let automodChannel = await member.guild.channels.cache.get('1301786987812094022');
-	// 	if(!automodChannel) return;
-	// 	await automodChannel.send(`<@&1300590342181228554> <@&1295636297775452160>\n<@${member.user.id}> has joined and account is less than 14 days old.\nJoined on ${member.joinedAt}\nMember created at ${member.user.createdAt}.\nJoin log: ${msg.url}`);
-	// }
+	await logChannel.send({embeds:[logEmbed]});
 });
 client.on(Events.GuildMemberRemove, async (member) => {
 	if (!await safetyCheck(member)) return;
 	if(!getValue(correctMutableName('logging.GuildMemberRemove'))) return;
+
+	let moderator = null;
+	try{
+		const auditLogs = await member.guild.fetchAuditLogs({
+			type:AuditLogEvent.MemberKick,
+			limit: 1
+		});
+		const kick = auditLogs.entries.first();
+		if(kick) moderator = kick.executor.id;
+	}catch(e){
+		console.error(e, "(likely lacks perms to fetch audit logs)");
+	}
+
+	SQL.addLog(member.user.id, moderator ? moderator : 'N/A', moderator ? 'kick' : 'leave', `Originally joined on ${member.joinedAt}`, Date.now());
+
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('errorColor')));
-	logEmbed.setTitle('Member left');
+	logEmbed.setTitle(wasKick === 0 ? 'Member left' : 'Member kicked');
 	logEmbed.setAuthor({name:member.user.tag,iconURL:member.user.displayAvatarURL()});
 	logEmbed.setDescription(`<@${member.user.id}> - Originally Joined on ${member.joinedAt}\n**Roles:** ${member.roles.cache.map(r=>r.name).join(', ')}`);
 	logEmbed.setTimestamp(Date.now());
@@ -247,6 +282,20 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 	logEmbed.setColor(getValue(correctMutableName('altColor')));
 	if(!oldMember.communicationDisabledUntil&&newMember.communicationDisabledUntil){
 		if(!getValue(correctMutableName('logging.GuildMemberUpdate.muted'))) return;
+
+		try{
+			const auditLogs = await oldMember.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberUpdate,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				SQL.addLog(oldMember.user.id, entry.executor.id, 'mute', entry.reason || '(No reason provided)', entry.createdTimestamp);
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+		}
+
 		logEmbed.setTitle('Member muted');
 		logEmbed.setAuthor({name:oldMember.user.tag,iconURL:oldMember.user.displayAvatarURL()});
 		logEmbed.setDescription(`Timed out until <t:${Math.floor(newMember.communicationDisabledUntilTimestamp/1000)}:f>`);
@@ -256,6 +305,21 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 	}
 	if(oldMember.communicationDisabledUntil&&!newMember.communicationDisabledUntil){
 		if(!getValue(correctMutableName('logging.GuildMemberUpdate.unmuted'))) return;
+
+		try{
+			const auditLogs = await oldMember.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberUpdate,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				SQL.addLog(oldMember.user.id, entry.executor.id, 'unmute', entry.reason || '(No reason provided)', entry.createdTimestamp);
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+			SQL.addLog(oldMember.user.id, 'Unknown', 'unmute', '(Could not fetch audit log)', Date.now()/1000);
+		}
+
 		logEmbed.setTitle('Member unmuted');
 		logEmbed.setAuthor({name:oldMember.user.tag,iconURL:oldMember.user.displayAvatarURL()});
 		logEmbed.setTimestamp(Date.now());
@@ -264,6 +328,23 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 	}
 	if(oldMember.nickname!=newMember.nickname){
 		if(!getValue(correctMutableName('logging.GuildMemberUpdate.nick'))) return;
+
+		let moderator = null;
+		try{
+			const auditLogs = await oldMember.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberUpdate,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				if(entry.executor.id!=oldMember.user.id) moderator = entry.executor.id;
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+		}
+
+		SQL.addLog(oldMember.user.id, wasForced ? moderator : 'N/A', 'updatenick', `Old nickname: ${oldMember.nickname} -> ${newMember.nickname}`, Date.now()/1000);
+		
 		if(oldMember.nickname==null) oldMember.nickname='(None)';
 		if(newMember.nickname==null) newMember.nickname='(None)';
 		logEmbed.setTitle('Nickname changed');
@@ -273,8 +354,40 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 		logEmbed.setFooter({text:`User ID: ${oldMember.user.id}`});
 		await logChannel.send({embeds:[logEmbed]});
 	}
+	if(oldMember.user.username!=newMember.user.username){
+		if(!getValue(correctMutableName('logging.GuildMemberUpdate.name'))) return;
+
+		SQL.addLog(oldMember.user.id, 'N/A', 'updatename', `Old username: ${oldMember.nickname} -> ${newMember.nickname}`, Date.now()/1000);
+
+		if(oldMember.user.username==null) oldMember.user.username='(None)';
+		if(newMember.user.username==null) newMember.user.username='(None)';
+		logEmbed.setTitle('Username changed');
+		logEmbed.setAuthor({name:oldMember.user.tag,iconURL:oldMember.user.displayAvatarURL()});
+		logEmbed.setDescription(`Old nickname: ${oldMember.user.username}\nNew nickname: ${newMember.user.username}`);
+		logEmbed.setTimestamp(Date.now());
+		logEmbed.setFooter({text:`User ID: ${oldMember.user.id}`});
+		await logChannel.send({embeds:[logEmbed]});
+	}
 	if(oldMember.roles.cache.size!=newMember.roles.cache.size){
 		if(!getValue(correctMutableName('logging.GuildMemberUpdate.roles'))) return;
+
+		try{
+			const auditLogs = await oldMember.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberRoleUpdate,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				let or = oldMember.roles.cache.map(r=>r.name).join(', ');
+				let nr = newMember.roles.cache.map(r=>r.name).join(', ');
+				SQL.addLog(oldMember.user.id, entry.executor.id, 'updateroles', `Roles changed: ${or} -> ${nr}`, entry.createdTimestamp);
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+			SQL.addLog(oldMember.user.id, 'Unknown', 'updateroles', '(Could not fetch audit log)', Date.now()/1000);
+			console.log("didn't work");
+		}
+
 		logEmbed.setTitle('Roles changed');
 		logEmbed.setAuthor({name:oldMember.user.tag,iconURL:oldMember.user.displayAvatarURL()});
 		let excludedRoles = ['1295625879535226922', '1296298827384360980', '1309313095797178389'];
@@ -288,6 +401,21 @@ client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
 	}
 	if(oldMember.avatar!=newMember.avatar){
 		if(!getValue(correctMutableName('logging.GuildMemberUpdate.avatar'))) return;
+
+		try{
+			const auditLogs = await oldMember.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberUpdate,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				SQL.addLog(oldMember.user.id, 'N/A', 'updatepfp', `Avatar changed: ${oldMember.user.displayAvatarURL()} -> ${newMember.user.displayAvatarURL()}`, entry.createdTimestamp);
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+			SQL.addLog(oldMember.user.id, 'N/A', 'updatepfp', '(Could not fetch audit log)', Date.now());
+		}
+
 		logEmbed.setTitle('Avatar updated.');
 		logEmbed.setAuthor({name:newMember.user.tag,iconURL:newMember.user.displayAvatarURL()});
 		logEmbed.setThumbnail(newMember.user.displayAvatarURL());
@@ -304,6 +432,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState)=>{
 	let logEmbed = new EmbedBuilder();
 	if(!oldState.channel && newState.channel){
 		if(!getValue(correctMutableName('logging.VoiceStateUpdate.join'))) return;
+		SQL.addLog(newState.member.user.id, 'N/A', 'joinvc', `Joined <#${newState.channel.id}>`, Date.now()/1000);
 		logEmbed.setColor(getValue(correctMutableName('confirmColor')));
 		logEmbed.setTitle('User connected to a voice channel');
 		logEmbed.setAuthor({name:newState.member.user.tag,iconURL:newState.member.user.displayAvatarURL()});
@@ -314,6 +443,22 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState)=>{
 	}
 	else if(oldState.channel && !newState.channel){
 		if(!getValue(correctMutableName('logging.VoiceStateUpdate.leave'))) return;
+
+		let moderator = null;
+		try{
+			const auditLogs = await oldState.member.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberDisconnect,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				if(entry.executor.id!=oldState.member.user.id) moderator = entry.executor.id;
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+		}
+
+		SQL.addLog(oldState.member.user.id, moderator ? moderator : 'N/A', 'leavevc', `Left <#${oldState.channel.id}>`, Date.now()/1000);
 		logEmbed.setColor(getValue(correctMutableName('errorColor')));
 		logEmbed.setTitle('User disconnected from a voice channel');
 		logEmbed.setAuthor({name:oldState.member.user.tag,iconURL:oldState.member.user.displayAvatarURL()});
@@ -324,6 +469,20 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState)=>{
 	}
 	else if(oldState.channel !== newState.channel){
 		if(!getValue(correctMutableName('logging.VoiceStateUpdate.move'))) return;
+		let moderator = null;
+		try{
+			const auditLogs = await oldState.member.guild.fetchAuditLogs({
+				type:AuditLogEvent.MemberMove,
+				limit: 1
+			});
+			const entry = auditLogs.entries.first();
+			if(entry){
+				if(entry.executor.id!=oldState.member.user.id) moderator = entry.executor.id;
+			}
+		}catch(e){
+			console.error(e, "(likely lacks perms to fetch audit logs)");
+		}
+		SQL.addLog(oldState.member.user.id, moderator ? moderator : 'N/A', 'movevc', `Moved from <#${oldState.channel.id}> to <#${newState.channel.id}>`, Date.now()/1000);
 		logEmbed.setColor(getValue(correctMutableName('altColor')));
 		logEmbed.setTitle('User moved between voice channels');
 		logEmbed.setAuthor({name:newState.member.user.tag,iconURL:newState.member.user.displayAvatarURL()});
@@ -336,6 +495,19 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState)=>{
 client.on(Events.GuildBanAdd, async (ban) => {
 	if (!await safetyCheck(ban)) return;
 	if(!getValue(correctMutableName('logging.GuildBanAdd'))) return;
+	try{
+		const auditLogs = await ban.guild.fetchAuditLogs({
+			type:AuditLogEvent.MemberBanAdd,
+			limit: 1
+		});
+		const entry = auditLogs.entries.first();
+		if(entry){
+			SQL.addLog(ban.user.id, entry.executor.id, 'ban', entry.reason || '(No reason provided)', entry.createdTimestamp);
+		}
+	}catch(e){
+		console.error(e, "(likely lacks perms to fetch audit logs)");
+		SQL.addLog(ban.user.id, 'Unknown', 'ban', '(Could not fetch audit log)', Date.now()/1000);
+	}
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	const {guild, user} = ban;
 	let logEmbed = new EmbedBuilder();
@@ -350,6 +522,19 @@ client.on(Events.GuildBanAdd, async (ban) => {
 client.on(Events.GuildBanRemove, async (ban) => {
 	if (!await safetyCheck(ban)) return;
 	if(!getValue(correctMutableName('logging.GuildBanRemove'))) return;
+	try{
+		const auditLogs = await ban.guild.fetchAuditLogs({
+			type:AuditLogEvent.MemberBanRemove,
+			limit: 1
+		});
+		const entry = auditLogs.entries.first();
+		if(entry){
+			SQL.addLog(ban.user.id, entry.executor.id, 'unban', 'N/A', entry.createdTimestamp);
+		}
+	}catch(e){
+		console.error(e, "(likely lacks perms to fetch audit logs)");
+		SQL.addLog(ban.user.id, 'Unknown', 'unban', '(Could not fetch audit log)', Date.now()/1000);
+	}
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	const {guild, user} = ban;
 	let logEmbed = new EmbedBuilder();
@@ -364,6 +549,7 @@ client.on(Events.GuildBanRemove, async (ban) => {
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
 	if (!await safetyCheck(user)) return;
 	if(!getValue(correctMutableName('logging.MessageReactionAdd'))) return;
+	SQL.addLog(user.id, 'N/A', 'addreaction', `Added a reaction to ${reaction.message.url} with ${reaction.emoji}`, Date.now()/1000);
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('confirmColor')));
@@ -378,6 +564,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
 client.on(Events.MessageReactionRemove, async (reaction, user) => {
 	if (!await safetyCheck(user)) return;
 	if(!getValue(correctMutableName('logging.MessageReactionRemove'))) return;
+	SQL.addLog(user.id, 'N/A', 'removereaction', `Removed a reaction to ${reaction.message.url} with ${reaction.emoji}`, Date.now()/1000);
 	let logChannel = await client.channels.cache.get(getValue(correctMutableName('logChannel')));
 	let logEmbed = new EmbedBuilder();
 	logEmbed.setColor(getValue(correctMutableName('errorColor')));
@@ -392,20 +579,14 @@ client.on(Events.MessageReactionRemove, async (reaction, user) => {
 
 client.on(Events.ClientReady,async()=>{
 	console.info('[INFO]: 7TV bot is online.');
-	// console.info('[INFO]: Type "exit" to shutdown bot from container.');
-
-	// rl.prompt();
-	// console.info('[INFO]: Connecting to database...');
-	// await SQL.connect().catch((err)=>{
-	// 	console.error(err);
-	// });
 });
 
 client.reloadCommands();
 //client.reloadSlashCommands();
 
-const defaultConfPath = path.join(__dirname, 'default-config.json');
-const confPath = path.join(__dirname, 'config.json');
+const defaultConfPath = path.join(__dirname, 'config/default-config.json');
+const confPath = path.join(__dirname, 'config/config.json');
+const dbPath = path.join(__dirname, 'db.sqlite');
 
 function mergeConfigs(defaultConf, conf){
 	return { ...defaultConf, ...conf };
@@ -415,6 +596,10 @@ function findNewKeys(defaultConf, userConf) {
 }
 if(!fs.existsSync(confPath)){
 	console.info('[INFO]: Config file not found. Creating default config file.');
+	if(!fs.existsSync(defaultConfPath)){
+		console.error('[FATAL]: You are missing the default config. Pull the file from the bot repository and place it in the config directory.');
+		process.exit(1);
+	}
 	fs.copyFileSync(defaultConfPath, confPath);
 	console.info('[INFO]: Config file created.');
 }
@@ -431,24 +616,18 @@ else{
 	else{
 		console.info('[INFO]: Config file up to date.');
 	}
-	
 }
 
+process.on('SIGINT', async () => {
+	console.log('Received SIGINT. Gracefully shutting down...');
+	sql.closePool();
+	process.exit(0);
+});
+process.on('SIGTERM', async () => {
+	console.log('Received SIGTERM. Gracefully shutting down...');
+	sql.closePool();
+	process.exit(0);
+});
 
+SQL.migrateDatabase();
 client.login(token);
-
-// const rl = readline.createInterface({
-// 	input: process.stdin,
-// 	output: process.stdout,
-// 	prompt: '> '
-// });
-
-// rl.on('line', function(line){
-// 	const input = line.trim();
-// 	console.log(input);
-// 	if(input==='exit'){
-// 		rl.close();
-// 		process.exit(0);
-// 	}
-// 	rl.prompt();
-// });
