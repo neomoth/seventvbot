@@ -2,7 +2,7 @@ function removequotes(str){
 	return str.replace(/^['"]+|['"]+$/g, '');
 }
 
-const {PermissionsBitField, Permissions} = require('discord.js');
+const {PermissionsBitField, Permissions, Role, User, GuildMember} = require('discord.js');
 const {cfgEdit, getMutables, getKeyType, mutableExists, correctMutableName, setDefault, resetAll, getDescription, getDecoratedValue} = require('../cfgedit');
 module.exports = {
 	data:{
@@ -58,9 +58,9 @@ module.exports = {
 					subtype = type.split('#')[1];
 					type = type.split('#')[0];
 				}
-
 				switch(type){
 					case "CHANNEL":
+						await i.client.channels.fetch();
 						try{
 							const channel = await i.client.channels.fetch(id);
 							if(!channel) return 1;
@@ -79,19 +79,21 @@ module.exports = {
 							return 1;
 						}
 					case "USER":
+						// await i.client.users.fetch();
 						try{
 							const user = await i.client.users.fetch(id);
 							if(!user) return 1;
-							return 0;
+							return user;
 						}
 						catch(e){
-							return 0;
+							return 1;
 						}
 					case "ROLE":
+						await i.guild.roles.fetch();
 						try{
-							const role = i.guild.roles.cache.get(id);
+							const role = await i.guild.roles.cache.get(id);
 							if(!role) return 1;
-							return 0;
+							return role;
 						}
 						catch(e){
 							return 1;
@@ -167,14 +169,18 @@ module.exports = {
 				}
 				let type = k.split(":")[1];
 				let result = await isIdValid(val.toString(), type);
+				async function success(){
+					cfgEdit(key, val);
+					return await i.reply(`Set config value for \`${key}\` to \`${getDecoratedValue(key)}\`. To unset, pass \`null\`.`);
+				}
 				switch(result){
-					case 0:
-						cfgEdit(key, val);
-						return await i.reply(`Set config value for \`${key}\` to \`${getDecoratedValue(key)}\`. To unset, pass \`null\`.`);
+					case 0: return await success();
 					case 1: return await i.reply(`You must provide a valid ${type.split('#')[0].toLowerCase()} ID. To unset, pass \`null\`.`);
 					case 2: return await i.reply(`Channel ID was valid, but I either can't see the channel or can't send messages in it. Fix and try again.`);
 					case 3: return await i.reply(`Incorrect channel type. Expected a ${type.split('#')[1].toLowerCase()} channel.`);
 					case 4: return await i.reply(`I don't know what could possibly cause this but if this somehow triggers, the channel is somehow found but not a part of the guild.`)
+					default:
+						if(typeof result == 'object') return await success();
 				}
 			}
 
@@ -189,17 +195,19 @@ module.exports = {
 				let finalVal = [];
 				for (const id of val.split(',')){
 					let result = await isIdValid(id.toString().trim(), type);
-					if (result === 0){
+					if (result === 0 || typeof result == 'object'){
 						if(finalVal.includes(id.trim())) return await i.reply(`Value at index ${index} is already in the array. Do not include duplicate values.`);
 						finalVal.push(id.trim());
 						index++;
 						continue;
 					}
+					async function err1(){return await i.reply(`Value at index ${index} is not a valid ${type.split('#')[0].toLowerCase()} ID.`)}
 					switch(result){
-						case 1: return await i.reply(`Value at index ${index} is not a valid ${type.split('#')[0].toLowerCase()} ID.`);
+						case 1: return await err1();
 						case 2: return await i.reply(`Value at index ${index} was a valid ${type.split('#')[0].toLowerCase()} ID, but I either can't see the channel or can't send messages in it. Fix and try again.`);
 						case 3: return await i.reply(`Value at index ${index} was a valid ${type.split('#')[0].toLowerCase()} ID, but the channel is of the wrong type. Expected a ${type.split('#')[1].toLowerCase()} channel.`);
 						case 4: return await i.reply(`somehow the value at ${index} was found but is not a part of the guild.`)
+						default: return await err1();
 					}
 				}
 				cfgEdit(key, finalVal);
@@ -219,8 +227,8 @@ module.exports = {
 			else if(keyType.startsWith("Array")){
 				if(keyType.includes("[")){
 					let arrType = keyType.split("[")[1].split("]")[0];
-					if(arrType.startsWith("ID")) return handleIDArray(keyType, value);
-					if(arrType.startsWith("Permission")) return handlePermissionArray(keyType, value);
+					if(arrType.startsWith("ID")) return handleIDArray(arrType, value);
+					if(arrType.startsWith("Permission")) return handlePermissionArray(arrType, value);
 					// if no matches, fall into normal type handling.
 				}
 			}
