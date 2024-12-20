@@ -30,7 +30,7 @@ module.exports = {
 		for (const key of i.client.storedData.keys()){
 			if(key===args[0]){
 				let eRes = i.client.storedData.get(args[1].toString());
-				let res = eval(eRes[0]);
+				let res = await eval(eRes[0]);
 				if(hide)i.delete();
 				else try{
 					await i.reply({embeds:[new EmbedBuilder().setColor(getValue(correctMutableName('primaryColor'))).setTitle('eval result').setDescription(res.toString())]});
@@ -49,7 +49,7 @@ module.exports = {
 		let evalCmd;
 		if(hide) evalCmd = args.slice(0,lastArg).join(' ');
 		else evalCmd = args.slice(0).join(' ');
-		let evaluated = eval(evalCmd);
+		let evaluated = await eval(evalCmd);
 		if(save) i.client.storedData.set(name,[evalCmd,i]);
 		if(hide){
 			await i.delete();
