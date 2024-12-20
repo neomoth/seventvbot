@@ -7,7 +7,7 @@ module.exports = {
 		description:'Search a user\'s infractions and logs.',
 		usage:']logs (list-types | <user> [infraction-type])',
 		aliases:['l'],
-		mod:true
+		mod:true,
 	}, async execute(i,args){
 		if(!args[0]) return await i.reply({content:`You need to specify the user you want to search for. Usage: \`${this.data.usage}\``, ephemeral:true});
 		if(args[0]==="list-types") return await i.reply({content:"Valid types are as follows: `mute, unmute, warn, kick, ban, unban, join, leave, updateroles, addreaction, removereaction, deletemessage, editmessage, updatenick, updatename, updatepfp, joinvc, movevc, leavevc`", ephemeral:true});
@@ -28,7 +28,7 @@ module.exports = {
 			let type = args[1];
 			logs = await i.client.sql.getAllLogsByUserAndType(user.id, type);
 		}
-		if(logs.length<1) return await i.reply({content:"There are no logs" + (args[1] ? ' of this type ' : '') + "for this user.", ephemeral:true});
+		if(logs.length<1) return await i.reply({content:"There are no logs" + (args[1] ? ' of this type ' : ' ') + "for this user.", ephemeral:true});
 
 		let ids = [];
 		let users = [];

@@ -17,7 +17,12 @@ module.exports = {
 		let aliases=[]; //array of arrays
 		let mods = []; // array
 		let guildId = []; //array
-		let isMod = i.member.permissions.has(PermissionsBitField.Flags.ManageMessages) || i.author.id==ownerId;
+		let isMod = false;
+		for(const perm of getValue(correctMutableName('modPermissions'))){
+			if(!i.member.permissions.has(perm)) continue;
+			isMod = true;
+		}
+		if(i.author.id==ownerId) isMod = true;
 		console.log(args);
 		if(!args[0]){
 			const pagination = new Pagination(i);

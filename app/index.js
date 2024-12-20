@@ -132,6 +132,13 @@ client.on(Events.MessageCreate, async (e)=>{
 				return;
 			}
 		}
+		let isMod = false;
+		for(const perm of getValue(correctMutableName('modPermissions'))){
+			if(!e.member.permissions.has(perm)) continue;
+			isMod = true;
+		}
+		if(e.author.id==ownerId) isMod = true;
+		if(cmd.data.mod&&!isMod) return;
 		if(getValue(correctMutableName('lockCommands'))){
 			if(cmd.data.restrict && getValue(correctMutableName('commandChannels')).length>0)
 				if(!getValue(correctMutableName('commandChannels')).includes(e.channelId)&&e.author.id!=ownerId&&!e.member.permissions.has(PermissionsBitField.Flags.ManageMessages,false))return;
