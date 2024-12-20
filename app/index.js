@@ -93,6 +93,15 @@ client.on(Events.InteractionCreate, async interaction=>{
 client.on(Events.MessageCreate, async (e)=>{
 	if(e.author.bot) return; // ignore bots/self
 
+	// TODO: move this to a module when that system actually exists
+	let persistRoles = getValue(correctMutableName('persistRoles'));
+	if(persistRoles.length>0){
+		for(const role of persistRoles){
+			if(!member.roles.cache.has(role)) continue;
+			member.roles.add(role);
+		}
+	}
+
 	// Command Handler
 	if(!e.content.startsWith(globalPrefix)) return;
 	let message = e.content.substring(1);

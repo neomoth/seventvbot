@@ -37,7 +37,8 @@
         "privilegedUsers": [],
         "modRoles": [],
 		"adminRoles": [],
-		"joinRoles": []
+		"joinRoles": [],
+		"persistRoles": []
     },
     "types": {
         "logging": "Boolean",
@@ -71,7 +72,8 @@
         "privilegedUsers": "Array[ID:USER]",
         "modRoles": "Array[ID:ROLE]",
 		"adminRoles": "Array[ID:ROLE]",
-		"joinRoles": "Array[ID:ROLE]"
+		"joinRoles": "Array[ID:ROLE]",
+		"persistRoles": "Array[ID:ROLE]"
     },
     "defaults": {
         "logging": false,
@@ -105,7 +107,8 @@
         "privilegedUsers": [],
         "modRoles": [],
 		"adminRoles": [],
-		"joinRoles": []
+		"joinRoles": [],
+		"persistRoles": []
     },
     "descriptions": {
         "logging": "Whether or not to use logging features. Requires \u001b[35mlogChannel\u001b[0m to be set.",
@@ -139,6 +142,7 @@
         "privilegedUsers": "Array of user IDs that are exempt from most restrictions. This does \u001b[1mNOT\u001b[0m include access to \u001b[34meval\u001b[0m.",
 		"modRoles": "Array of role IDs that are required to use commands flagged as \u001b[36mmod\u001b[0m.",
 		"adminRoles": "Array of role IDs that are required to use commands flagged as \u001b[36madmin\u001b[0m.",
-		"joinRoles": "Array of role IDs that will be granted to users when they join."
+		"joinRoles": "Array of role IDs that will be granted to users when they join.",
+		"persistRoles": "Array of role IDs that will be granted to users when they speak if they don't have the role already."
     }
 }
